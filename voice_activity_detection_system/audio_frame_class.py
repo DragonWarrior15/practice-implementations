@@ -7,12 +7,12 @@ from dataclasses import dataclass
 class AudioFrame:
     """A single audio frame.
 
-    samples: list[float]
+    channels: list[list[float]]
     start_sample: int
     valid_sample_count: int
     """
 
-    samples: list[float]
+    channels: list[list[float]]
     start_sample: int
     valid_sample_count: int
 
@@ -53,3 +53,33 @@ class SpeechInterval:
     """
     start_sample: int
     end_sample: int
+
+@dataclass
+class LoadedAudio:
+    """Loaded audio class carries extracted information from a WAV clip.
+    
+    channels: list[list[float]]
+    sample_rate: int
+    channel_count: int
+    sample_width_bytes: int
+    frame_count: int
+    duration_sec: float
+    """
+    channels: list[list[float]]
+    sample_rate: int
+    channel_count: int
+    sample_width_bytes: int
+    frame_count: int
+    duration_sec: float
+
+@dataclass
+class VadResult:
+    """Output result of our detection algorithm.
+    
+    sample_rate: int
+    frame_predictions: list[FramePrediction]
+    speech_intervals: list[SpeechInterval]
+    """
+    sample_rate: int
+    frame_predictions: list[FramePrediction]
+    speech_intervals: list[SpeechInterval]
