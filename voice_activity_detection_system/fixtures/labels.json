@@ -1,0 +1,12 @@
+{
+  "speech_intervals": [
+    {
+      "start_sec": 0.1,
+      "end_sec": 0.3
+    },
+    {
+      "start_sec": 0.35,
+      "end_sec": 0.55
+    }
+  ]
+}

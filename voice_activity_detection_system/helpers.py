@@ -2,9 +2,11 @@
 
 import wave
 from pathlib import Path
+from statistics import quantiles
 
 from voice_activity_detection_system.audio_frame_class import (
     AudioFrame,
+    EvaluationMetrics,
     FramedAudio,
     FramePrediction,
     LoadedAudio,
@@ -335,6 +337,9 @@ def detect_speech(
     threshold: float = 0.1,
     min_silence_ms: float = 100.0,
     min_speech_ms: float = 100.0,
+    threshold_mode: str = "fixed",
+    adaptive_multiplier: float = 3.0,
+    adaptive_min_threshold: float = 0.005,
 ) -> VadResult:
     """Orchestrator to ingest a wav file and return predictions."""
     # read the file
@@ -347,9 +352,23 @@ def detect_speech(
         frame_duration_ms=frame_duration_ms,
     )
 
+    if threshold_mode == "fixed":
+        threshold_used = threshold
+    elif threshold_mode == "adaptive":
+        threshold_used = get_adaptive_threshold(
+            [compute_rms(frame) for frame in framed_audio.frames],
+            multiplier=adaptive_multiplier,
+            min_threshold=adaptive_min_threshold,
+        )
+    else:
+        raise ValueError(
+            "threshold_mode must be either 'fixed' or 'adaptive', "
+            f"got {threshold_mode!r}"
+        )
+
     # get predictions
     predictions = predict_frames(
-        framed_audio=framed_audio, threshold=threshold
+        framed_audio=framed_audio, threshold=threshold_used
     )
 
     # process intervals based on predictions
@@ -366,4 +385,141 @@ def detect_speech(
         sample_rate=loaded_audio.sample_rate,
         frame_predictions=predictions,
         speech_intervals=intervals,
+        threshold_used=threshold_used,
     )
+
+
+def result_to_dict(result: VadResult) -> dict[str, object]:
+    """Helper to dump VadResult into a JSON compatible dictionary."""
+    output = {}
+
+    # high level attributes
+    output["sample_rate"] = result.sample_rate
+    output["threshold_used"] = result.threshold_used
+    output["frame_predictions"] = result.frame_predictions
+    output["speech_intervals"] = result.speech_intervals
+
+    # frame predictions
+    output["frame_predictions"] = [
+        {
+            "start_sec": x.start_sample / result.sample_rate,
+            "end_sec": (x.start_sample + x.valid_sample_count)
+            / result.sample_rate,
+            "rms": x.rms,
+            "is_speech": x.is_speech,
+        }
+        for x in output["frame_predictions"]
+    ]
+
+    # speech intervals
+    output["speech_intervals"] = [
+        {
+            "start_sec": x.start_sample / result.sample_rate,
+            "end_sec": x.end_sample / result.sample_rate,
+        }
+        for x in output["speech_intervals"]
+    ]
+
+    return output
+
+
+def check_overlap_with_threshold(
+    prediction: FramePrediction,
+    labelled_intervals: list[SpeechInterval],
+    overlap_threshold: float,
+) -> bool:
+    """Helper to check overlap of a prediction with ground
+    truth labels of speech.
+    """
+    start_sample = prediction.start_sample
+    end_sample = prediction.start_sample + prediction.valid_sample_count
+
+    total_overlap_length = 0
+
+    for interval in labelled_intervals:
+        start_interval = interval.start_sample
+        end_interval = interval.end_sample
+
+        total_overlap_length += max(
+            0,
+            min(end_sample, end_interval) - max(start_sample, start_interval),
+        )
+
+    return (
+        total_overlap_length / prediction.valid_sample_count
+        >= overlap_threshold
+    )
+
+
+def evaluate_predictions(
+    predictions: list[FramePrediction],
+    labelled_intervals: list[SpeechInterval],
+    overlap_threshold: float = 0.5,
+) -> EvaluationMetrics:
+    """Calculates classification metrics using predictions and labels."""
+    # Note, predictions are already "speech" classified by model
+    # We will use overlap with labelled intervals to assign the true label
+    # This is a little bit inverted operation compared to routing tasks
+    # where ground truth is already available
+    true_labels = [
+        int(
+            check_overlap_with_threshold(
+                prediction, labelled_intervals, overlap_threshold
+            )
+        )
+        for prediction in predictions
+    ]
+
+    tp, fp, fn, tn = 0, 0, 0, 0
+    for idx in range(len(true_labels)):
+        if true_labels[idx] == 1 and predictions[idx].is_speech == 1:
+            tp += 1
+        elif true_labels[idx] == 1 and predictions[idx].is_speech == 0:
+            fn += 1
+        elif true_labels[idx] == 0 and predictions[idx].is_speech == 1:
+            fp += 1
+        else:
+            tn += 1
+
+    # calculate precision and recall
+    if tp + fp == 0:
+        precision = 0
+    else:
+        precision = tp / (tp + fp)
+
+    if tp + fn == 0:
+        recall = 0
+    else:
+        recall = tp / (tp + fn)
+
+    if precision + recall == 0:
+        f1 = 0
+    else:
+        f1 = (2 * precision * recall) / (precision + recall)
+
+    return EvaluationMetrics(
+        true_positive=tp,
+        false_positive=fp,
+        false_negative=fn,
+        true_negative=tn,
+        precision=precision,
+        recall=recall,
+        f1=f1,
+    )
+
+
+def get_adaptive_threshold(
+    rms_list: list[float], multiplier: float, min_threshold: float
+) -> float:
+    """Calculates adaptive threshold based on frame RMS values.
+
+    This is a useful helper in case we have consistently quiet speech, which
+    will not be detected by a fixed threshold classifier.
+    """
+    if not rms_list:
+        return min_threshold
+
+    # n = 10 gives deciles and we want 20th percentile
+    pct_floor = quantiles(rms_list, n=10)[1]
+
+    return max(min_threshold, pct_floor * multiplier)

@@ -1,27 +1,32 @@
-"""Tests for audio framing."""
+"""Tests for the VAD pipeline."""
 
-import unittest
-from pathlib import Path
+import json
 import struct
 import tempfile
+import unittest
 import wave
+from pathlib import Path
 
 from voice_activity_detection_system.audio_frame_class import (
     AudioFrame,
-    FramePrediction,
     FramedAudio,
+    FramePrediction,
     SpeechInterval,
+    VadResult,
 )
 from voice_activity_detection_system.helpers import (
     compute_rms,
     decode_pcm,
     deinterleave,
+    detect_speech,
     frame_audio,
+    get_adaptive_threshold,
     load_wav,
     postprocess_intervals,
     predict_frame,
     predict_frames,
     predictions_to_intervals,
+    result_to_dict,
 )
 
 
@@ -53,7 +58,10 @@ class FrameAudioTests(unittest.TestCase):
 
         self.assertEqual(len(result.frames), 3)
         self.assertEqual(
-            [(frame.start_sample, frame.valid_sample_count) for frame in result.frames],
+            [
+                (frame.start_sample, frame.valid_sample_count)
+                for frame in result.frames
+            ],
             [(0, 320), (320, 320), (640, 10)],
         )
         self.assertTrue(
@@ -123,7 +131,9 @@ class ComputeRmsTests(unittest.TestCase):
 
 
 class PredictionTests(unittest.TestCase):
-    def test_predict_frame_preserves_metadata_and_labels_threshold(self) -> None:
+    def test_predict_frame_preserves_metadata_and_labels_threshold(
+        self,
+    ) -> None:
         frame = AudioFrame(
             channels=[[0.1, -0.1]],
             start_sample=320,
@@ -282,9 +292,7 @@ class LoadWavTests(unittest.TestCase):
                 wav_file.setnchannels(2)
                 wav_file.setsampwidth(2)
                 wav_file.setframerate(8000)
-                wav_file.writeframes(
-                    struct.pack("<hhhh", *interleaved)
-                )
+                wav_file.writeframes(struct.pack("<hhhh", *interleaved))
 
             loaded = load_wav(path)
 
@@ -314,6 +322,112 @@ class LoadWavTests(unittest.TestCase):
 
         self.assertEqual(loaded.channels, [[-1.0, 0.0, 127 / 128]])
         self.assertEqual(loaded.frame_count, 3)
+
+
+class EndToEndTests(unittest.TestCase):
+    def test_result_to_dict_uses_real_partial_frame_end(self) -> None:
+        result = VadResult(
+            sample_rate=16_000,
+            frame_predictions=[FramePrediction(640, 10, 0.2, True)],
+            speech_intervals=[SpeechInterval(320, 650)],
+        )
+
+        output = result_to_dict(result)
+
+        self.assertEqual(
+            output["frame_predictions"][0]["end_sec"],
+            650 / 16_000,
+        )
+        self.assertEqual(
+            output["speech_intervals"][0]["end_sec"],
+            650 / 16_000,
+        )
+        json.dumps(output)
+
+    def test_detect_speech_on_deterministic_wav(self) -> None:
+        sample_rate = 1000
+        samples = (
+            [0] * 100 + [16_384] * 200 + [0] * 50 + [16_384] * 200 + [0] * 100
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "fixture.wav"
+            with wave.open(str(path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(sample_rate)
+                wav_file.writeframes(
+                    b"".join(
+                        sample.to_bytes(2, "little", signed=True)
+                        for sample in samples
+                    )
+                )
+
+            result = detect_speech(path, threshold=0.1)
+
+        self.assertEqual(len(result.frame_predictions), 33)
+        self.assertEqual(
+            result.speech_intervals,
+            [SpeechInterval(100, 560)],
+        )
+
+    def test_adaptive_mode_detects_quiet_signal(self) -> None:
+        sample_rate = 1000
+        samples = [0] * 100 + [1638] * 200 + [0] * 100
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "quiet.wav"
+            with wave.open(str(path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(sample_rate)
+                wav_file.writeframes(
+                    b"".join(
+                        sample.to_bytes(2, "little", signed=True)
+                        for sample in samples
+                    )
+                )
+
+            fixed = detect_speech(path, threshold=0.1)
+            adaptive = detect_speech(path, threshold_mode="adaptive")
+
+        self.assertEqual(fixed.speech_intervals, [])
+        self.assertEqual(adaptive.speech_intervals, [SpeechInterval(100, 300)])
+        self.assertEqual(adaptive.threshold_used, 0.005)
+
+    def test_detect_speech_rejects_unknown_threshold_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "empty.wav"
+            with wave.open(str(path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(1000)
+                wav_file.writeframes(b"")
+
+            with self.assertRaises(ValueError):
+                detect_speech(path, threshold_mode="unknown")
+
+
+class AdaptiveThresholdTests(unittest.TestCase):
+    def test_uses_noise_floor_and_ignores_high_outliers(self) -> None:
+        threshold = get_adaptive_threshold(
+            [0.01] * 8 + [0.5] * 2,
+            multiplier=3.0,
+            min_threshold=0.005,
+        )
+
+        self.assertAlmostEqual(threshold, 0.03)
+
+    def test_uses_positive_floor_for_silence(self) -> None:
+        self.assertEqual(
+            get_adaptive_threshold(
+                [0.0] * 10,
+                multiplier=3.0,
+                min_threshold=0.005,
+            ),
+            0.005,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

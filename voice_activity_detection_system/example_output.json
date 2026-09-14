@@ -1,0 +1,25 @@
+{
+  "threshold_mode": "fixed",
+  "threshold_used": 0.1,
+  "raw_frame_metrics": {
+    "true_positive": 21,
+    "false_positive": 0,
+    "false_negative": 0,
+    "true_negative": 12,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+  },
+  "postprocessed_frame_metrics": {
+    "true_positive": 21,
+    "false_positive": 2,
+    "false_negative": 0,
+    "true_negative": 10,
+    "precision": 0.9130434782608695,
+    "recall": 1.0,
+    "f1": 0.9545454545454545
+  },
+  "speech_intervals": [
+    {"start_sec": 0.1, "end_sec": 0.56}
+  ]
+}
