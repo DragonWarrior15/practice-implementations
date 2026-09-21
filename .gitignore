@@ -6,4 +6,5 @@ __pycache__
 .venv
 
 # project specific
-keyboard_next_word_prediction/data
+keyboard_next_word_prediction/data*
+keyboard_next_word_prediction/artifacts
