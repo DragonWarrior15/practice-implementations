@@ -3,3 +3,7 @@
 
 # python
 __pycache__
+.venv
+
+# project specific
+keyboard_next_word_prediction/data
