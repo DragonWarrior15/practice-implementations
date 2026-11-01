@@ -30,6 +30,58 @@ def get_dataset_stats():
 
     print("Total test data rows: ", len(test))
 
+    # print total labels
+    label_names = train.features["label"].names
+    print("Sample Labels")
+    print(label_names[:10])
+
+
+def convert_to_json(system_prompt: str, text: str, label: str):
+    """Simple utility that takes in a prompt, along with a text and label
+    and generates the json format for input to a language model.
+    """
+    json_template = {
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text},
+            # note that we are also preparing the label in the same message
+            # flow, this will not work in practice as we will be leaking the
+            # output into the model which is not ideal
+            {"role": "assistant", "content": label},
+        ]
+    }
+
+    return json_template
+
+
+def prepare_json(
+    system_prompt: str | None = None,
+) -> list[dict[str, list[dict[str, str]]]]:
+    """Prepares jsonl data and saves to respective files."""
+    # for the basic version, read the training data, select one example
+    # and generate the json
+    dataset = load_from_disk(DATA_DIR)
+    train = dataset["train"]
+
+    example = train[0]
+
+    label_names = train.features["label"].names
+
+    if not system_prompt:
+        system_prompt = (
+            "Classify the banking request into exactly one of these intents:\n"
+            + "\n".join(label_names)
+            + "\nReturn only the exact intent name, with no explanation."
+        )
+
+    print(
+        convert_to_json(
+            system_prompt=system_prompt,
+            text=example["text"],
+            label=label_names[example["label"]],
+        )
+    )
+
 
 def main():
     # parse args
@@ -48,7 +100,7 @@ def main():
     if step == "nothing":
         return
     elif step == "prepare_json":
-        return
+        prepare_json()
     elif step == "download":
         download_data()
     elif step == "get_dataset_stats":

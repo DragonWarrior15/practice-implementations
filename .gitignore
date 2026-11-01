@@ -8,3 +8,7 @@ __pycache__
 # project specific
 # llm_fine_tuning_basic
 llm_fine_tuning_basic/data
+
+# keyboard_next_word_prediction
+# temporary, must be removed later on
+keyboard_next_word_prediction

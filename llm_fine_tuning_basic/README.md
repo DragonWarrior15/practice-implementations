@@ -121,3 +121,9 @@ Total training data rows:  10003
 ```
 
 Total test data rows:  3080
+
+Sample Labels
+
+```python
+['activate_my_card', 'age_limit', 'apple_pay_or_google_pay', 'atm_support', 'automatic_top_up', 'balance_not_updated_after_bank_transfer', 'balance_not_updated_after_cheque_or_cash_deposit', 'beneficiary_not_allowed', 'cancel_transfer', 'card_about_to_expire']
+```
