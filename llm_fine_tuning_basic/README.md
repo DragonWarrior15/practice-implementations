@@ -96,3 +96,28 @@ Matrix shapes are `(output features, input features)`.
 | Gate (gate_proj) | 16,777,216 | `(8192, 2048)` | `mlx.core.bfloat16` |
 | Up (up_proj) | 16,777,216 | `(8192, 2048)` | `mlx.core.bfloat16` |
 | Down (down_proj) | 16,777,216 | `(2048, 8192)` | `mlx.core.bfloat16` |
+
+## Inspect Data
+
+```python
+DatasetDict({
+    train: Dataset({
+        features: ['text', 'label'],
+        num_rows: 10003
+    })
+    test: Dataset({
+        features: ['text', 'label'],
+        num_rows: 3080
+    })
+})
+```
+
+Total training data rows:  10003
+
+```python
+['text', 'label']
+{'text': 'I am still waiting on my card?', 'label': 11}
+{'text': ['I am still waiting on my card?', "What can I do if my card still hasn't arrived after 2 weeks?", 'I have been waiting over a week. Is the card still coming?'], 'label': [11, 11, 11]}
+```
+
+Total test data rows:  3080

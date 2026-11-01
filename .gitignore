@@ -4,3 +4,7 @@
 # python
 __pycache__
 .venv
+
+# project specific
+# llm_fine_tuning_basic
+llm_fine_tuning_basic/data
