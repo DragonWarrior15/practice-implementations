@@ -13,6 +13,15 @@
     - First time download can take a while, the size is around `2.48GB`
 3. Inspect model layers and parameter counts
     - Same model, `python helpers/inspect_model_layers.py`
+4. Download data
+    - `python helpers/prepare_data.py --step download`
+5. Get Dataset Stats
+    - `python helpers/prepare_data.py --step get_dataset_stats`
+6. Prepare and check one JSON that will feed into the LLM
+    - `python helpers/prepare_data.py --step prepare_json`
+7. Save Labels for reference and reuse across other scripts
+    - `python helpers/prepare_data.py --step save_labels`
+    - There are `77` labels in total, saved as a list by the above step
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`

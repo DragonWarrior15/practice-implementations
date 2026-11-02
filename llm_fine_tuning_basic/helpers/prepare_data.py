@@ -1,9 +1,10 @@
 """Helper script to download the dataset BANKING77."""
 
 import argparse
+import json
 
 from datasets import load_dataset, load_from_disk
-from helpers.constants import DATA_DIR
+from helpers.constants import DATA_DIR, LABELS_FILE_PATH
 
 
 def download_data():
@@ -83,6 +84,17 @@ def prepare_json(
     )
 
 
+def get_and_save_labels():
+    """Extract labels for reuse in later pipelines."""
+    dataset = load_from_disk(DATA_DIR)
+    train = dataset["train"]
+    label_names = train.features["label"].names
+
+    LABELS_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    LABELS_FILE_PATH.write_text(json.dumps(label_names))
+
+
 def main():
     # parse args
     parser = argparse.ArgumentParser(description="Dataset handling utility.")
@@ -90,7 +102,13 @@ def main():
         "--step",
         type=str,
         help="Step to perform",
-        choices=("download", "prepare_json", "nothing", "get_dataset_stats"),
+        choices=(
+            "download",
+            "prepare_json",
+            "nothing",
+            "get_dataset_stats",
+            "save_labels",
+        ),
         default="nothing",
     )
 
@@ -105,6 +123,8 @@ def main():
         download_data()
     elif step == "get_dataset_stats":
         get_dataset_stats()
+    elif step == "save_labels":
+        get_and_save_labels()
     else:
         raise ValueError("Unrecognized argument for step")
 
