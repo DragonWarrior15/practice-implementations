@@ -9,6 +9,7 @@ __pycache__
 # llm_fine_tuning_basic
 llm_fine_tuning_basic/data
 llm_fine_tuning_basic/runs/*/test.jsonl
+llm_fine_tuning_basic/training_data/*.jsonl
 
 # keyboard_next_word_prediction
 # temporary, must be removed later on

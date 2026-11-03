@@ -27,6 +27,8 @@
     - Should prepare a runs folder, and a timestep inside that identifying a unique run
     - To just run evaluations, assuming model outputs are already available, run `python helpers/run_evaluations.py --run_id=<RUN_ID>`
     - Key results of the run with the base model are noted below
+9. Prepare data for finetuning
+    - `python helpers/prepare_data.py --step=prepare_finetuning_data`
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`
