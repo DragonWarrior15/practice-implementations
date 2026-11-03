@@ -26,6 +26,7 @@
     - `python helpers/run_evaluations.py`
     - Should prepare a runs folder, and a timestep inside that identifying a unique run
     - To just run evaluations, assuming model outputs are already available, run `python helpers/run_evaluations.py --run_id=<RUN_ID>`
+    - Key results of the run with the base model are noted below
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`
@@ -140,3 +141,35 @@ Sample Labels
 ```python
 ['activate_my_card', 'age_limit', 'apple_pay_or_google_pay', 'atm_support', 'automatic_top_up', 'balance_not_updated_after_bank_transfer', 'balance_not_updated_after_cheque_or_cash_deposit', 'beneficiary_not_allowed', 'cancel_transfer', 'card_about_to_expire']
 ```
+
+## Evaluations
+
+### Base Model Statistics (mlx-community/Llama-3.2-1B-Instruct-bf16)
+
+Run is stored in `runs/2026-11-03T104734Z`. It took around 45 minutes to run.
+
+```json
+{
+  "micro avg": {
+    "precision": 0.3479064039408867,
+    "recall": 0.18344155844155843,
+    "f1-score": 0.24022108843537415,
+    "support": 3080.0
+  },
+  "macro avg": {
+    "precision": 0.41010616803226807,
+    "recall": 0.1834415584415585,
+    "f1-score": 0.20581545546334365,
+    "support": 3080.0
+  },
+  "weighted avg": {
+    "precision": 0.41010616803226807,
+    "recall": 0.18344155844155843,
+    "f1-score": 0.20581545546334365,
+    "support": 3080.0
+  },
+  "invalid_label_rate": 0.4727272727272727
+}
+```
+
+Invalid label rate itself is quite high.. which means other statistics are going to automatically worsen.

@@ -4,7 +4,7 @@
 import argparse
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from datasets import load_from_disk
 from helpers.constants import (
@@ -49,7 +49,7 @@ class EvaluationResult(BaseModel):
 def build_and_save_manifest(prompt_file: str, model: str) -> Manifest:
     """Build and saves the manifest."""
     # fix the time
-    now_dt = datetime.now(timezone.utc)
+    now_dt = datetime.now(UTC)
 
     manifest = Manifest(
         run_id=now_dt.strftime(r"%Y-%m-%dT%H%M%SZ"),
@@ -58,7 +58,7 @@ def build_and_save_manifest(prompt_file: str, model: str) -> Manifest:
         started_at=now_dt.isoformat(),
     )
 
-    run_directory = RUNS_DIRECTORY / manifest.run_id
+    run_directory = RUNS_DIRECTORY.joinpath(manifest.run_id)
     run_directory.mkdir(parents=True, exist_ok=False)
     run_directory.joinpath(MANIFEST_FILE_NAME).write_text(
         manifest.model_dump_json(indent=2)
@@ -106,7 +106,7 @@ def run_evaluation_for_manifest(manifest: Manifest) -> None:
     labels = read_labels()
 
     with results_path.open("a") as results_file:
-        for idx, row in enumerate(test.select(range(2))):
+        for idx, row in enumerate(test):
             text = row["text"]
             label = row["label"]
 
@@ -127,6 +127,13 @@ def run_evaluation_for_manifest(manifest: Manifest) -> None:
             # completed cases. Each line is an independent JSON document.
             results_file.write(case_result.model_dump_json() + "\n")
             results_file.flush()
+
+    manifest.completed_at = datetime.now(UTC).isoformat()
+
+    run_directory = RUNS_DIRECTORY.joinpath(manifest.run_id)
+    run_directory.joinpath(MANIFEST_FILE_NAME).write_text(
+        manifest.model_dump_json(indent=2)
+    )
 
 
 def build_and_save_classification_report(
@@ -153,16 +160,24 @@ def build_and_save_classification_report(
 
     y_true = []
     y_predicted = []
+    labels_set = set(labels)
+    invalid_labels_count = 0
 
     with open(results_path, encoding="utf-8") as results_file:
         for line in results_file:
             result = EvaluationResult.model_validate_json(line)
             y_true.append(result.actual)
             y_predicted.append(result.predicted)
+            if result.predicted not in labels_set:
+                invalid_labels_count += 1
 
     report = classification_report(
         y_true=y_true, y_pred=y_predicted, labels=labels, output_dict=True
     )
+
+    # add an invalid label rate as well
+    invalid_label_rate = invalid_labels_count / len(y_true)
+    report["invalid_label_rate"] = invalid_label_rate
 
     # save the report
     run_dir.joinpath(CLASSIFICATION_REPORT_FILE_NAME).write_text(
