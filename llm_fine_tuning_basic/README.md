@@ -22,6 +22,10 @@
 7. Save Labels for reference and reuse across other scripts
     - `python helpers/prepare_data.py --step save_labels`
     - There are `77` labels in total, saved as a list by the above step
+8. Run Evaluations with the base model
+    - `python helpers/run_evaluations.py`
+    - Should prepare a runs folder, and a timestep inside that identifying a unique run
+    - To just run evaluations, assuming model outputs are already available, run `python helpers/run_evaluations.py --run_id=<RUN_ID>`
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`

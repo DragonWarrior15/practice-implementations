@@ -2,11 +2,13 @@
 
 # some objects to define data exchanges across different functions
 import argparse
+import json
 import logging
 from datetime import datetime, timezone
 
 from datasets import load_from_disk
 from helpers.constants import (
+    CLASSIFICATION_REPORT_FILE_NAME,
     DATA_DIR,
     EVALUATION_RESULTS_FILE_NAME,
     MANIFEST_FILE_NAME,
@@ -18,6 +20,7 @@ from helpers.utils import (
     read_labels,
 )
 from pydantic import BaseModel
+from sklearn.metrics import classification_report
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,6 +68,28 @@ def build_and_save_manifest(prompt_file: str, model: str) -> Manifest:
     return manifest
 
 
+def get_manifest_from_run_id(run_id: str) -> Manifest | None:
+    """Based on the run id, explore the runs folder to read a run manifest."""
+    manifest_file_path = RUNS_DIRECTORY.joinpath(run_id).joinpath(
+        MANIFEST_FILE_NAME
+    )
+    if manifest_file_path.exists():
+        try:
+            # read the file
+            manifest = Manifest.model_validate_json(
+                manifest_file_path.read_text()
+            )
+            return manifest
+        except Exception as e:
+            logger.error(
+                f"Could not build manifest for run id: {run_id} due to Exception {str(e)}"
+            )
+            return None
+
+    # if the directory is not found
+    return None
+
+
 def run_evaluation_for_manifest(manifest: Manifest) -> None:
     """Run inference and persist each case result incrementally."""
     # for each case in the evaluation dataset, generate the outputs and build
@@ -104,6 +129,47 @@ def run_evaluation_for_manifest(manifest: Manifest) -> None:
             results_file.flush()
 
 
+def build_and_save_classification_report(
+    manifest: Manifest | None = None, run_id: str | None = None
+):
+    """Build a summary of different metrics when running evaluation."""
+    # first get the relevant data
+    if not manifest and not run_id:
+        logger.warning(
+            "Skipping build_and_save_classification_report as neither"
+            " manifest, nor run_id are supplied"
+        )
+
+    # if run id is given, build the manifest object
+    if not manifest and run_id:
+        manifest = get_manifest_from_run_id(run_id)
+
+    # manifest is available, read the predictions to get the predictions and actuals
+    run_dir = RUNS_DIRECTORY.joinpath(manifest.run_id)
+    results_path = run_dir.joinpath(EVALUATION_RESULTS_FILE_NAME)
+
+    # get the labels for input to the classification report
+    labels = read_labels()
+
+    y_true = []
+    y_predicted = []
+
+    with open(results_path, encoding="utf-8") as results_file:
+        for line in results_file:
+            result = EvaluationResult.model_validate_json(line)
+            y_true.append(result.actual)
+            y_predicted.append(result.predicted)
+
+    report = classification_report(
+        y_true=y_true, y_pred=y_predicted, labels=labels, output_dict=True
+    )
+
+    # save the report
+    run_dir.joinpath(CLASSIFICATION_REPORT_FILE_NAME).write_text(
+        json.dumps(report, indent=2), encoding="utf-8"
+    )
+
+
 def main():
     # parse args
     parser = argparse.ArgumentParser(description="Evaluation Runner Utility.")
@@ -128,13 +194,26 @@ def main():
         required=False,
     )
 
+    # run id if running just evaluations
+    parser.add_argument(
+        "--run_id",
+        type=str,
+        help="Run ID to evaluate.",
+        required=False,
+    )
+
     args = parser.parse_args()
+
+    if args.run_id:
+        build_and_save_classification_report(run_id=args.run_id)
+        return
 
     manifest = build_and_save_manifest(
         prompt_file=args.prompt_file, model=args.model
     )
 
     run_evaluation_for_manifest(manifest)
+    build_and_save_classification_report(manifest=manifest)
 
 
 if __name__ == "__main__":

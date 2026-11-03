@@ -11,3 +11,4 @@ RUNS_DIRECTORY = DIR.joinpath("runs")
 MANIFEST_FILE_NAME = "manifest.json"
 EVALUATION_RESULTS_FILE_NAME = "test.jsonl"
 PROMPT_DIR = DIR.joinpath("prompts")
+CLASSIFICATION_REPORT_FILE_NAME = "classification_report.json"
