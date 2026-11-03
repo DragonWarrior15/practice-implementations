@@ -15,7 +15,7 @@ def read_labels() -> list[str]:
 def get_system_prompt(prompt_file_name: str) -> str:
     """Helper to get read the system prompt from file."""
     prompt_full_path = PROMPT_DIR.joinpath(prompt_file_name)
-    labels = read_labels()
+    labels = "\n".join(read_labels())
     return prompt_full_path.read_text().format(label_names=labels)
 
 
