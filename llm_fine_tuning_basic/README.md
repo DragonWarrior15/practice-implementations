@@ -29,6 +29,12 @@
     - Key results of the run with the base model are noted below
 9. Prepare data for finetuning
     - `python helpers/prepare_data.py --step=prepare_finetuning_data`
+10. Run finetuning
+    - ```bash
+        mlx_lm.lora --config configs/config_01.yaml 2>&1 \
+        | perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' \
+        | tee training_logs/training_01.log
+      ```
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`
