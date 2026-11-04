@@ -20,7 +20,7 @@ from helpers.utils import (
     read_labels,
 )
 from pydantic import BaseModel
-from sklearn.metrics import classification_report
+from sklearn.metrics import accuracy_score, classification_report
 
 logging.basicConfig(
     level=logging.INFO,
@@ -183,6 +183,9 @@ def build_and_save_classification_report(
     # add an invalid label rate as well
     invalid_label_rate = invalid_labels_count / len(y_true)
     report["invalid_label_rate"] = invalid_label_rate
+
+    # add an explicit accuracy metric since there are invalid labels
+    report["accuracy"] = accuracy_score(y_true, y_predicted)
 
     # save the report
     run_dir.joinpath(CLASSIFICATION_REPORT_FILE_NAME).write_text(

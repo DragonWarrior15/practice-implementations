@@ -30,11 +30,22 @@
 9. Prepare data for finetuning
     - `python helpers/prepare_data.py --step=prepare_finetuning_data`
 10. Run finetuning
+    - `mkdir training_logs`
     - ```bash
+        PYTHONUNBUFFERED=1 \
         mlx_lm.lora --config configs/config_01.yaml 2>&1 \
         | perl -pe 's/\e\[[0-9;]*[A-Za-z]//g' \
         | tee training_logs/training_01.log
       ```
+11. To run evaluations on the validation set, we first need to save our adapters in specific directories
+    - ```bash
+        mkdir -p adapters/step_800
+        cp adapters/adapter_config.json adapters/step_800/
+        cp adapters/0000800_adapters.safetensors adapters/step_800/adapters.safetensors
+      ```
+    - Do the same for step 600 by changing the names
+    - For step 1000, we can actually just use the `adapters` folder (adapter_config.json and adapters.safetensors are the required files)
+    - Now run individual evaluations using `python helpers/run_evaluations.py --adapter_path=adapters/step_600 --evaluation_type=valid`
 
 ## Inspect Model Layers (``)
 ### Model: `mlx-community/Llama-3.2-1B-Instruct-bf16`
@@ -176,7 +187,8 @@ Run is stored in `runs/2026-11-03T104734Z`. It took around 45 minutes to run.
     "f1-score": 0.20581545546334365,
     "support": 3080.0
   },
-  "invalid_label_rate": 0.4727272727272727
+  "invalid_label_rate": 0.4727272727272727,
+  "accuracy": 0.18344155844155843
 }
 ```
 
@@ -187,3 +199,13 @@ Invalid label rate itself is quite high.. which means other statistics are going
 Command for the same is mentioned in the Steps section. Based on the training logs, we can run full validations on checkpoints 600, 800 and 1000. See plot below
 
 ![Training Validation Loss](training_logs/training_01_validation_loss.png)
+
+Now, once we run evaluations on the fine tuned models, we can see tremendous improvements in numbers on the validation set (at least)
+
+| Finetuning Step | Accuracy | Invalid Label Rate | Precision | Recall | Run ID |
+| --- | --- | --- | --- | --- | --- |
+| 600 | 0.714 | 0.002 | 0.716 | 0.715 | 2026-11-04T144627Z |
+| 800 | 0.745 | 0.001 | 0.746 | 0.745 | 2026-11-04T150559Z |
+| 1000 | 0.752 | 0 | 0.752 | 0.752 | 2026-11-04T152316Z |
+
+Looks like the 1000 step iteration is the best.
