@@ -209,3 +209,22 @@ Now, once we run evaluations on the fine tuned models, we can see tremendous imp
 | 1000 | 0.752 | 0 | 0.752 | 0.752 | 2026-11-04T152316Z |
 
 Looks like the 1000 step iteration is the best.
+
+### Final Test Results: Base vs. Fine-Tuned
+
+Both runs used the same 3,080 held-out BANKING77 requests, the same `prompt_v1.md` template, and Llama 3.2 1B Instruct (BF16). The 1,000-step LoRA checkpoint was selected on the validation split before this test comparison.
+
+| Metric | Base model | Fine-tuned (1,000 steps) | Change (pp) |
+| --- | ---: | ---: | ---: |
+| Accuracy | 18.34% | 77.56% | +59.22 |
+| Macro precision | 41.01% | 79.71% | +38.70 |
+| Macro recall | 18.34% | 77.56% | +59.22 |
+| Macro F1 | 20.58% | 76.94% | +56.36 |
+| Precision among valid predictions | 34.79% | 77.69% | +42.90 |
+| Invalid-label rate | 47.27% | 0.16% | −47.11 |
+
+Correct predictions increased from **565 to 2,389**, while invalid outputs fell from **1,456 to 5**. Precision among valid predictions also rose, so the improvement reflects better intent selection as well as better output format.
+
+Accuracy counts invalid predictions as incorrect. Macro metrics give each of the 77 intents equal weight. Precision among valid predictions is micro precision over the 77 allowed labels; it excludes invalid outputs from its denominator.
+
+Reports: [base model](runs/2026-11-03T104734Z/classification_report.json) · [fine-tuned model](runs/2026-11-04T162523Z/classification_report.json).
