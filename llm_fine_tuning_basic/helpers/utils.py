@@ -61,6 +61,10 @@ def get_response_from_llm(
     return text
 
 
-def get_model_and_tokenizer(model: str) -> tuple[Module, TokenizerWrapper]:
-    model, tokenizer = load("mlx-community/Llama-3.2-1B-Instruct-bf16")
+def get_model_and_tokenizer(
+    model: str, adapter_path: str | None
+) -> tuple[Module, TokenizerWrapper]:
+    model, tokenizer = load(
+        "mlx-community/Llama-3.2-1B-Instruct-bf16", adapter_path=adapter_path
+    )
     return model, tokenizer

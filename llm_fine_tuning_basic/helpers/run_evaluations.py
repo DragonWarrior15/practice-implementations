@@ -6,7 +6,7 @@ import json
 import logging
 from datetime import UTC, datetime
 
-from datasets import load_from_disk
+from datasets import Dataset, load_from_disk
 from helpers.constants import (
     CLASSIFICATION_REPORT_FILE_NAME,
     DATA_DIR,
@@ -37,6 +37,8 @@ class Manifest(BaseModel):
     started_at: str
     completed_at: str | None = None
     notes: str = ""
+    evaluation_type: str = "test"
+    adapter_path: str | None = None
 
 
 class EvaluationResult(BaseModel):
@@ -46,7 +48,9 @@ class EvaluationResult(BaseModel):
     predicted: str
 
 
-def build_and_save_manifest(prompt_file: str, model: str) -> Manifest:
+def build_and_save_manifest(
+    prompt_file: str, model: str, evaluation_type: str, adapter_path: str
+) -> Manifest:
     """Build and saves the manifest."""
     # fix the time
     now_dt = datetime.now(UTC)
@@ -56,6 +60,8 @@ def build_and_save_manifest(prompt_file: str, model: str) -> Manifest:
         prompt_file=prompt_file,
         model=model,
         started_at=now_dt.isoformat(),
+        evaluation_type=evaluation_type,
+        adapter_path=adapter_path,
     )
 
     run_directory = RUNS_DIRECTORY.joinpath(manifest.run_id)
@@ -90,23 +96,22 @@ def get_manifest_from_run_id(run_id: str) -> Manifest | None:
     return None
 
 
-def run_evaluation_for_manifest(manifest: Manifest) -> None:
+def run_evaluation_for_manifest(manifest: Manifest, dataset: Dataset) -> None:
     """Run inference and persist each case result incrementally."""
     # for each case in the evaluation dataset, generate the outputs and build
     # the EvaluationResult instance
     run_directory = RUNS_DIRECTORY.joinpath(manifest.run_id)
     results_path = run_directory.joinpath(EVALUATION_RESULTS_FILE_NAME)
 
-    model, tokenizer = get_model_and_tokenizer(manifest.model)
-
-    # read the test dataset
-    test = load_from_disk(DATA_DIR)["test"]
+    model, tokenizer = get_model_and_tokenizer(
+        manifest.model, adapter_path=manifest.adapter_path
+    )
 
     # get the labels list
     labels = read_labels()
 
     with results_path.open("a") as results_file:
-        for idx, row in enumerate(test):
+        for idx, row in enumerate(dataset):
             text = row["text"]
             label = row["label"]
 
@@ -217,17 +222,53 @@ def main():
         required=False,
     )
 
+    # evaluation type, valid or test
+    parser.add_argument(
+        "--evaluation_type",
+        type=str,
+        help="Evaluation Type, valid or test",
+        choices=["valid", "test"],
+        default="test",
+        required=False,
+    )
+
+    # adapter path for fine tuned models
+    parser.add_argument(
+        "--adapter_path",
+        type=str,
+        help="Adapter directory, containing the adapter config and safetensors",
+        default=None,
+        required=False,
+    )
+
     args = parser.parse_args()
 
     if args.run_id:
         build_and_save_classification_report(run_id=args.run_id)
         return
 
+    # read the train data, and split to train and test sets
+    dataset = load_from_disk(DATA_DIR)
+
+    # check the dataset to pick
+    if args.evaluation_type == "test":
+        dataset = dataset["test"]
+    else:
+        dataset = dataset["train"]
+        # shuffle, we assume the seed is fixed for now
+        # we also hardcode other steps for simplicity
+        dataset = dataset.shuffle(seed=42)
+        train_indices = int(len(dataset) * (1 - 0.2))
+        dataset = dataset.select(range(train_indices, len(dataset)))
+
     manifest = build_and_save_manifest(
-        prompt_file=args.prompt_file, model=args.model
+        prompt_file=args.prompt_file,
+        model=args.model,
+        evaluation_type=args.evaluation_type,
+        adapter_path=args.adapter_path,
     )
 
-    run_evaluation_for_manifest(manifest)
+    run_evaluation_for_manifest(manifest, dataset)
     build_and_save_classification_report(manifest=manifest)
 
 
