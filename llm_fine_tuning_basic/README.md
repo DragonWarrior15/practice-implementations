@@ -181,3 +181,9 @@ Run is stored in `runs/2026-11-03T104734Z`. It took around 45 minutes to run.
 ```
 
 Invalid label rate itself is quite high.. which means other statistics are going to automatically worsen.
+
+## Fine Tuning
+
+Command for the same is mentioned in the Steps section. Based on the training logs, we can run full validations on checkpoints 600, 800 and 1000. See plot below
+
+![Training Validation Loss](training_logs/training_01_validation_loss.png)
