@@ -1,0 +1,9 @@
+[project]
+name = "llm-constrained-decoding"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "transformers>=5.22.2",
+]
