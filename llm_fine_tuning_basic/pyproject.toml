@@ -1,0 +1,11 @@
+[project]
+name = "llm-fine-tuning-basic"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mlx-lm[train]>=0.32.2",
+    "pydantic>=2.14.2",
+    "scikit-learn>=1.9.1",
+]
