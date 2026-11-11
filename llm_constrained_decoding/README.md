@@ -10,3 +10,7 @@ Constrained Decoding is useful when we want to force the LLM output. Suppose we 
     - Initialize env using `uv sync`
     - Activate env using `source .venv/bin/activate`
     - Set Python Path using `export PYTHONPATH=$(pwd)`
+2. Download and run the model
+    - We will run the model `mlx-community/Llama-3.2-1B-Instruct-bf16` in this example
+    - `python helpers/run_model.py`
+    - Should ideally output `232`, however the output might change across runs
