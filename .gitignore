@@ -19,3 +19,4 @@ keyboard_next_word_prediction
 
 # llm_constrained_decoding
 llm_constrained_decoding/data
+llm_constrained_decoding/runs/*/test.jsonl
