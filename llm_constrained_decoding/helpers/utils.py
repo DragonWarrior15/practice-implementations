@@ -186,7 +186,6 @@ class ConstrainedDecodingLogitsProcess(LogitsProcessor):
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor
     ) -> torch.FloatTensor:
-        print("Called Now, LOL")
         """Main function executed after"""
         # now depending on the position, we need to find the list of allowed
         # first filter out the allowed labels, and then select

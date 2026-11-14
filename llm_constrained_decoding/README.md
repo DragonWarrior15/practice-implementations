@@ -23,3 +23,7 @@ Constrained Decoding is useful when we want to force the LLM output. Suppose we 
 5. The raw model outputs are available under `llm_fine_tuning_basic/runs/2026-11-03T104734Z`
     - We will use those as baselines, and generate the constrained decoding outputs here, and the compare them with the baseline and fine tuned version too
     - Fine tuned version outputs are saved under `llm_fine_tuning_basic/runs/2026-11-04T162523Z`
+6. Some updates to `utils.py` to add the Constrained Decoding Logic
+    - Along with an Early Stopping Criteria
+    - Its basic premise is that if we have figured out that only a single sequence is possible, we can stop generation, do a matching against allowed sequences of tokens and just return that
+    - In our example with the question `where is my card`, the constrained decoding run took 6 turns while the constrained decoding + stopping criteria approach took only 3 turns to generate the output.
