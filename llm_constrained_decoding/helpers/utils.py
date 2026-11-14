@@ -1,10 +1,16 @@
 """Helper utilities for classifier."""
 
 import json
-from typing import Any
 
+import torch
 from helpers.constants import LABELS_FILE_PATH, MODEL_NAME, PROMPT_DIR
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    LogitsProcessor,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+)
 
 
 def read_labels() -> list[str]:
@@ -36,8 +42,8 @@ def form_messages(system_prompt: str, user_query: str) -> list[dict]:
 def get_response_from_llm(
     user_query: str,
     prompt_file_name: str,
-    model: Any,
-    tokenizer: Any,
+    model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizerBase,
 ) -> str:
     """Run the loop for getting the triage output.
 
@@ -59,7 +65,19 @@ def get_response_from_llm(
     # for use later
     input_length = prompt["input_ids"].shape[1]
 
-    outputs = model.generate(**prompt, max_length=input_length + 16)
+    token_processor = ConstrainedDecodingLogitsProcess(
+        labels_to_tokens_map=get_token_ids_for_labels(
+            labels=read_labels(), tokenizer=tokenizer
+        ),
+        input_length=input_length,
+        eos_token_id=tokenizer.eos_token_id,
+    )
+
+    outputs = model.generate(
+        **prompt,
+        max_length=input_length + 16,
+        logits_processor=[token_processor],
+    )
 
     # slice off the input tokens to only get the assistant reply
 
@@ -70,12 +88,98 @@ def get_response_from_llm(
     return response
 
 
-def get_model_and_tokenizer(model_name: str = MODEL_NAME) -> tuple[Any, Any]:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+def get_token_ids_for_a_string(
+    str_to_decode: str, tokenizer: PreTrainedTokenizerBase
+) -> list[int]:
+    """Helper function to get token ids for a given string and tokenizer"""
+    tokens = tokenizer.encode(str_to_decode, add_special_tokens=False)
+    return tokens
+
+
+def get_token_ids_for_labels(
+    labels: list[str], tokenizer: PreTrainedTokenizerBase
+) -> dict[str, list[int]]:
+    """Helper function to use with ConstrainedDecodingLogitsProcess.
+
+    It can take a list of labels and return the corresponding tokens
+    for the same.
+    """
+    return {
+        label: get_token_ids_for_a_string(label, tokenizer) for label in labels
+    }
+
+
+class ConstrainedDecodingLogitsProcess(LogitsProcessor):
+    """Implements constrained decoding based on the labels in our dataset.
+    
+    Note that this LogitProcessor instance is called at every token generation.
+    That is, if the LLM generates say 10 tokens, at each generation this
+    particular hook will be called.
+    """
+
+    def __init__(
+        self,
+        labels_to_tokens_map: dict[str, list[int]],
+        input_length: int,
+        eos_token_id: int,
+    ):
+        """Processor only gets access to the input ids and scores tensors.
+
+        Rest of all parameters need to be passed at the generation runtime.
+        """
+        # initialize the labels to token maps for use in __call__
+        self.labels_to_tokens_map = labels_to_tokens_map
+        self.input_length = input_length
+        self.eos_token_id = eos_token_id
+
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        """Main function executed after"""
+        generated_ids = input_ids[0, self.input_length :]
+        len_generated = input_ids.shape[1] - self.input_length
+        # now depending on the position, we need to find the list of allowed
+        # first filter out the allowed labels, and then select
+        # the allowed tokens
+        idx = 0
+        allowed_sequences = self.labels_to_tokens_map.values()
+        while idx < len_generated:
+            allowed_sequences = [
+                x for x in allowed_sequences if len(x) > idx and x[idx] == generated_ids[idx]
+            ]
+            idx += 1
+
+        # we have filtered all relevant sequences, not get the allowed tokens
+        allowed_tokens = [
+            x[idx] if idx < len(x) else self.eos_token_id
+            for x in allowed_sequences
+        ]
+
+        # basis allowed tokens, set every other token to -inf
+        # we first create a tensor with all -inf
+        processed_scores = torch.full_like(
+            scores.clone(), fill_value=-torch.inf
+        )
+        # then set the allowed tokens to the original values
+        processed_scores[0, allowed_tokens] = scores[0, allowed_tokens]
+
+        return processed_scores
+
+
+def get_model_and_tokenizer(
+    model_name: str = MODEL_NAME,
+) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
+    tokenizer = get_tokenizer(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name, device_map="auto", torch_dtype="auto"
     )
     return model, tokenizer
+
+
+def get_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
+    """Helper to get the tokenizer"""
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    return tokenizer
 
 
 def test_run():
