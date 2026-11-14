@@ -16,3 +16,6 @@ llm_fine_tuning_basic/adapters
 # keyboard_next_word_prediction
 # temporary, must be removed later on
 keyboard_next_word_prediction
+
+# llm_constrained_decoding
+llm_constrained_decoding/data
