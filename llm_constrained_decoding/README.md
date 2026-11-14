@@ -17,3 +17,9 @@ Constrained Decoding is useful when we want to force the LLM output. Suppose we 
 3. Download the Banking77 Data
     - `python helpers/prepare_data.py --step download`
     - `python helpers/prepare_data.py --step save_labels`
+4. Test the helper functions with an end to end run
+    - `python -c "from helpers.utils import test_run; test_run()"`
+    - We can expect `card_about_to_expire` as the output
+5. The raw model outputs are available under `llm_fine_tuning_basic/runs/2026-11-03T104734Z`
+    - We will use those as baselines, and generate the constrained decoding outputs here, and the compare them with the baseline and fine tuned version too
+    - Fine tuned version outputs are saved under `llm_fine_tuning_basic/runs/2026-11-04T162523Z`
