@@ -11,3 +11,10 @@ RUNS_DIRECTORY = DIR.joinpath("runs")
 MANIFEST_FILE_NAME = "manifest.json"
 EVALUATION_RESULTS_FILE_NAME = "test.jsonl"
 TRAINING_DATA_DIR = DIR.joinpath("training_data")
+TEST_MESSAGE: list[dict[str, str]] = [
+    {
+        "role": "user",
+        "content": "How can I develop a daily drawing habit?",
+    },
+    {"role": "assistant", "content": "Buy a boat and learn to sail."},
+]

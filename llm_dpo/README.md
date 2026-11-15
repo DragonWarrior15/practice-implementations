@@ -69,3 +69,4 @@ It encourages the model to favor preferred responses relative to a reference mod
         - `target_ids = tokens[:, 1:]`
         - Then we can use `torch.gather` to simply retain the right token id value.
     - `python -c "from helpers.utils import test_run; test_run()"` will produce `-315.1342` as output for our sample message.
+    - `python -c "from helpers.utils import test_run_2; test_run_2()"` will produce `-53.7571`, the total for only the assistant message part.

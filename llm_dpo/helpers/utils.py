@@ -1,7 +1,7 @@
 """Helper utilities for classifier."""
 
 import torch
-from helpers.constants import MODEL_NAME
+from helpers.constants import MODEL_NAME, TEST_MESSAGE
 from torch import Tensor
 from transformers import (
     AutoModelForCausalLM,
@@ -15,12 +15,13 @@ def get_tokens_from_messages(
     messages: list[dict[str, str]],
     model: PreTrainedModel,
     tokenizer: PreTrainedTokenizerBase,
+    add_generation_prompt: bool = False,
 ) -> Tensor:
     prompt = tokenizer.apply_chat_template(
         messages,
-        # our messages already contain assistant role, hence the below is not
-        # needed in this case
-        add_generation_prompt=False,
+        # our messages might already contain assistant role, hence set the
+        # supplied value
+        add_generation_prompt=add_generation_prompt,
         tokenize=True,
         return_dict=True,
         return_tensors="pt",
@@ -94,20 +95,48 @@ def get_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
     return tokenizer
 
 
+def get_score_for_assistant_message(
+    messages: list[dict[str, str]],
+    model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizerBase,
+) -> Tensor:
+    """A helper to run all steps of getting the assistant msg log scores."""
+    tokens = get_tokens_from_messages(
+        messages=messages,
+        model=model,
+        tokenizer=tokenizer,
+        add_generation_prompt=False,
+    )
+
+    # find the token length except last assistant message
+    tokens_input_only = get_tokens_from_messages(
+        messages=messages[:-1],
+        model=model,
+        tokenizer=tokenizer,
+        # True bec in real use cases we add the assistant token to indicate to
+        # the model to start generating the outputs
+        add_generation_prompt=True,
+    )
+
+    output = get_log_softmax_from_llm_for_token_sequence(
+        tokens=tokens,
+        model=model,
+    )
+
+    # keep only the relevant trailing scores
+    output = output[:, -(tokens.shape[1] - tokens_input_only.shape[1]) :]
+
+    score = get_score_from_log_softmax(output)
+
+    return score
+
+
 def test_run():
     """For a quick end to end run."""
     model, tokenizer = get_model_and_tokenizer()
 
-    test_message = [
-        {
-            "role": "user",
-            "content": "How can I develop a daily drawing habit?",
-        },
-        {"role": "assistant", "content": "Buy a boat and learn to sail."},
-    ]
-
     tokens = get_tokens_from_messages(
-        messages=test_message, model=model, tokenizer=tokenizer
+        messages=TEST_MESSAGE, model=model, tokenizer=tokenizer
     )
 
     output = get_log_softmax_from_llm_for_token_sequence(
@@ -118,3 +147,12 @@ def test_run():
     print(get_score_from_log_softmax(output))
 
     print(output)
+
+
+def test_run_2():
+    model, tokenizer = get_model_and_tokenizer()
+    print(
+        get_score_for_assistant_message(
+            messages=TEST_MESSAGE, model=model, tokenizer=tokenizer
+        )
+    )
