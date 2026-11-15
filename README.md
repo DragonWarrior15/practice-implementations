@@ -1,7 +1,9 @@
 # practice-implementations
-Practice Implementations of different systems.
+
+Practice implementations of different systems.
 
 ## List of Systems
+
 ### [Voice Activity Detection System](voice_activity_detection_system/README.md)
 
 - Detects speech-like regions in PCM WAV audio using short-frame RMS energy.
