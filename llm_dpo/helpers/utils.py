@@ -95,11 +95,11 @@ def get_tokenizer(model_name: str) -> PreTrainedTokenizerBase:
     return tokenizer
 
 
-def get_score_for_assistant_message(
+def get_score_and_token_counts_for_assistant_message(
     messages: list[dict[str, str]],
     model: PreTrainedModel,
     tokenizer: PreTrainedTokenizerBase,
-) -> Tensor:
+) -> tuple[Tensor, int]:
     """A helper to run all steps of getting the assistant msg log scores."""
     tokens = get_tokens_from_messages(
         messages=messages,
@@ -124,11 +124,12 @@ def get_score_for_assistant_message(
     )
 
     # keep only the relevant trailing scores
-    output = output[:, -(tokens.shape[1] - tokens_input_only.shape[1]) :]
+    tokens_count = tokens.shape[1] - tokens_input_only.shape[1]
+    output = output[:, -tokens_count:]
 
     score = get_score_from_log_softmax(output)
 
-    return score
+    return score, tokens_count
 
 
 def test_run():
@@ -152,7 +153,7 @@ def test_run():
 def test_run_2():
     model, tokenizer = get_model_and_tokenizer()
     print(
-        get_score_for_assistant_message(
+        get_score_and_token_counts_for_assistant_message(
             messages=TEST_MESSAGE, model=model, tokenizer=tokenizer
         )
     )

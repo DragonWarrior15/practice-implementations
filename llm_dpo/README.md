@@ -69,4 +69,23 @@ It encourages the model to favor preferred responses relative to a reference mod
         - `target_ids = tokens[:, 1:]`
         - Then we can use `torch.gather` to simply retain the right token id value.
     - `python -c "from helpers.utils import test_run; test_run()"` will produce `-315.1342` as output for our sample message.
-    - `python -c "from helpers.utils import test_run_2; test_run_2()"` will produce `-53.7571`, the total for only the assistant message part.
+    - `python -c "from helpers.utils import test_run_2; test_run_2()"` will produce `-53.7571`, the total for only the assistant message part, across 9 tokens.
+4. Run evaluation on test set using the base model
+    - `python helpers/run_evaluations.py --evaluation_type test`
+
+### Evaluation Results
+
+| Run | Model / adapter | Split | Pairs | Accuracy (sum) | Accuracy (per token) | Notes |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| [2026-11-15T145154Z](runs/2026-11-15T145154Z/report.json) | Llama 3.2 1B Instruct BF16 / none | Test | 1,000 | 45.9% | 55.8% | Baseline before DPO |
+
+Preference accuracy is the fraction of pairs for which the chosen response has
+a higher conditional log-probability score than the rejected response; ties
+count as incorrect. The sum score adds response token log-probabilities, while
+the per-token score divides that sum by the number of scored tokens. Both
+include the assistant end-of-turn token.
+
+The chosen responses averaged 280.9 tokens and the rejected responses 241.8.
+The sum can favor shorter responses; per-token normalization changes the
+comparison and is useful as an additional diagnostic, not a guaranteed better
+measure of response quality. Neither metric assesses newly generated responses.

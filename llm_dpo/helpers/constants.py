@@ -18,3 +18,4 @@ TEST_MESSAGE: list[dict[str, str]] = [
     },
     {"role": "assistant", "content": "Buy a boat and learn to sail."},
 ]
+REPORT_FILE_NAME = "report.json"
