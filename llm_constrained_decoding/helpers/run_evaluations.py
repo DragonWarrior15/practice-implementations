@@ -38,7 +38,6 @@ class Manifest(BaseModel):
     completed_at: str | None = None
     notes: str = ""
     evaluation_type: str = "test"
-    adapter_path: str | None = None
 
 
 class EvaluationResult(BaseModel):
