@@ -75,6 +75,8 @@ It encourages the model to favor preferred responses relative to a reference mod
 5. Perform DPO Training
     - `mkdir -p dpo_dir/logs` to create a logging directory
     - `python -u helpers/train_dpo.py 2>&1 | tee dpo_dir/logs/training.log`
+6. Evaluate Checkpoints on Validation Data
+    - `python helpers/run_evaluations.py --evaluation_type valid --adapter_path dpo_dir/checkpoint-20`
 
 ### Evaluation Results
 
@@ -92,3 +94,17 @@ The chosen responses averaged 280.9 tokens and the rejected responses 241.8.
 The sum can favor shorter responses; per-token normalization changes the
 comparison and is useful as an additional diagnostic, not a guaranteed better
 measure of response quality. Neither metric assesses newly generated responses.
+
+### Validation Data Evaluation
+
+Compare checkpoints on the same 256 validation pairs to select a checkpoint
+before evaluating it on the held-out test set.
+
+| Checkpoint | Run | Pairs | Accuracy (sum) | Accuracy (per token) | Notes |
+| --- | --- | ---: | ---: | ---: | --- |
+| 20 | [2026-11-16T193340Z](runs/2026-11-16T193340Z/report.json) | 256 | 48.44% | 59.77% | Manifest does not record a completion time |
+
+Checkpoint 20 ranked the chosen response higher for 124 pairs by summed score
+and 153 pairs by per-token score. Evaluate the other checkpoints and the base
+model on these same validation pairs before selecting the best checkpoint. The
+test baseline above uses a different split and cannot be compared directly.

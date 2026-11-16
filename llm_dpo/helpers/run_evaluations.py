@@ -19,6 +19,7 @@ from helpers.utils import (
     get_model_and_tokenizer,
     get_score_and_token_counts_for_assistant_message,
 )
+from peft import PeftModel
 from pydantic import BaseModel
 
 logging.basicConfig(
@@ -47,7 +48,9 @@ class EvaluationResult(BaseModel):
     token_counts_rejected: int
 
 
-def build_and_save_manifest(model: str, evaluation_type: str) -> Manifest:
+def build_and_save_manifest(
+    model: str, evaluation_type: str, adapter_path: str | None = None
+) -> Manifest:
     """Build and saves the manifest."""
     # fix the time
     now_dt = datetime.now(UTC)
@@ -57,6 +60,7 @@ def build_and_save_manifest(model: str, evaluation_type: str) -> Manifest:
         model=model,
         started_at=now_dt.isoformat(),
         evaluation_type=evaluation_type,
+        adapter_path=adapter_path,
     )
 
     run_directory = RUNS_DIRECTORY.joinpath(manifest.run_id)
@@ -99,6 +103,8 @@ def run_evaluation_for_manifest(manifest: Manifest, dataset: Dataset) -> None:
     results_path = run_directory.joinpath(EVALUATION_RESULTS_FILE_NAME)
 
     model, tokenizer = get_model_and_tokenizer(manifest.model)
+    if manifest.adapter_path:
+        model = PeftModel.from_pretrained(model, manifest.adapter_path)
 
     with results_path.open("a") as results_file:
         for idx, row in enumerate(dataset):
@@ -222,6 +228,13 @@ def main():
         required=False,
     )
 
+    parser.add_argument(
+        "--adapter_path",
+        type=str,
+        default=None,
+        help="PEFT adapter checkpoint directory.",
+    )
+
     args = parser.parse_args()
 
     if args.run_id:
@@ -241,10 +254,13 @@ def main():
         dataset = dataset.shuffle(seed=42)
         train_indices = int(len(dataset) * (1 - 0.2))
         dataset = dataset.select(range(train_indices, len(dataset)))
+        # limit to 512 entries since scoring is a long time consuming task
+        dataset = dataset.select(range(512))
 
     manifest = build_and_save_manifest(
         model=args.model,
         evaluation_type=args.evaluation_type,
+        adapter_path=args.adapter_path,
     )
 
     run_evaluation_for_manifest(manifest, dataset)
