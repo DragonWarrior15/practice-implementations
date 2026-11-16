@@ -24,3 +24,4 @@ llm_constrained_decoding/runs/*/test.jsonl
 # llm_dpo
 llm_dpo/data
 llm_dpo/runs/*/test.jsonl
+llm_dpo/dpo_dir

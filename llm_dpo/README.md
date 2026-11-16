@@ -72,6 +72,9 @@ It encourages the model to favor preferred responses relative to a reference mod
     - `python -c "from helpers.utils import test_run_2; test_run_2()"` will produce `-53.7571`, the total for only the assistant message part, across 9 tokens.
 4. Run evaluation on test set using the base model
     - `python helpers/run_evaluations.py --evaluation_type test`
+5. Perform DPO Training
+    - `mkdir -p dpo_dir/logs` to create a logging directory
+    - `python -u helpers/train_dpo.py 2>&1 | tee dpo_dir/logs/training.log`
 
 ### Evaluation Results
 

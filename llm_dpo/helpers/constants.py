@@ -19,3 +19,5 @@ TEST_MESSAGE: list[dict[str, str]] = [
     {"role": "assistant", "content": "Buy a boat and learn to sail."},
 ]
 REPORT_FILE_NAME = "report.json"
+DPO_DIR = DIR.joinpath("dpo_dir")
+LOGGING_DIR = DPO_DIR.joinpath("logs")
