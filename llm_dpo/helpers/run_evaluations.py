@@ -254,8 +254,8 @@ def main():
         dataset = dataset.shuffle(seed=42)
         train_indices = int(len(dataset) * (1 - 0.2))
         dataset = dataset.select(range(train_indices, len(dataset)))
-        # limit to 512 entries since scoring is a long time consuming task
-        dataset = dataset.select(range(512))
+        # limit to 256 entries since scoring is a long time consuming task
+        dataset = dataset.select(range(256))
 
     manifest = build_and_save_manifest(
         model=args.model,

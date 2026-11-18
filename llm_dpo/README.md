@@ -77,6 +77,8 @@ It encourages the model to favor preferred responses relative to a reference mod
     - `python -u helpers/train_dpo.py 2>&1 | tee dpo_dir/logs/training.log`
 6. Evaluate Checkpoints on Validation Data
     - `python helpers/run_evaluations.py --evaluation_type valid --adapter_path dpo_dir/checkpoint-20`
+    - `python helpers/run_evaluations.py --evaluation_type valid --adapter_path dpo_dir/checkpoint-40`
+    - `python helpers/run_evaluations.py --evaluation_type valid --adapter_path dpo_dir/checkpoint-60`
 
 ### Evaluation Results
 
@@ -100,11 +102,14 @@ measure of response quality. Neither metric assesses newly generated responses.
 Compare checkpoints on the same 256 validation pairs to select a checkpoint
 before evaluating it on the held-out test set.
 
-| Checkpoint | Run | Pairs | Accuracy (sum) | Accuracy (per token) | Notes |
-| --- | --- | ---: | ---: | ---: | --- |
-| 20 | [2026-11-16T193340Z](runs/2026-11-16T193340Z/report.json) | 256 | 48.44% | 59.77% | Manifest does not record a completion time |
+| Checkpoint | Run | Pairs | Accuracy (sum) | Accuracy (per token) |
+| --- | --- | ---: | ---: | ---: |
+| 20 | [2026-11-16T193340Z](runs/2026-11-16T193340Z/report.json) | 256 | 48.44% | 59.77% |
+| 40 | [2026-11-18T180807Z](runs/2026-11-18T180807Z/report.json) | 256 | 48.05% | 59.77% |
+| 60 | [2026-11-18T184003Z](runs/2026-11-18T184003Z/report.json) | 256 | 48.44% | 60.16% |
 
-Checkpoint 20 ranked the chosen response higher for 124 pairs by summed score
-and 153 pairs by per-token score. Evaluate the other checkpoints and the base
-model on these same validation pairs before selecting the best checkpoint. The
+Checkpoint 20 and checkpoint 60 each ranked the chosen response higher for
+124 pairs by summed score; checkpoint 40 did so for 123. Per-token, the counts
+were 153, 153, and 154, respectively. These differences are small; evaluate
+the base model on the same validation pairs before selecting a checkpoint. The
 test baseline above uses a different split and cannot be compared directly.
