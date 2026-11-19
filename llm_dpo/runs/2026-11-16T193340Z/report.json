@@ -1,0 +1,5 @@
+{
+  "preference_accuracy": 0.484375,
+  "preference_accuracy_per_token": 0.59765625,
+  "total_evals": 256
+}
