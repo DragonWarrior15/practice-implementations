@@ -24,6 +24,7 @@ Practice implementations of different systems.
 
 ### [LLM Direct Preference Optimization (DPO)](llm_dpo/README.md)
 
-- Planned exercise exploring how preference pairs can guide model training.
-- Will inspect an existing dataset of prompts with chosen and rejected responses.
-- Aims to compare a small model before and after DPO using held-out examples.
+- Applies DPO with TRL and LoRA to Llama 3.2 1B Instruct using UltraFeedback preference pairs.
+- Scores chosen and rejected responses using summed and per-token log-probabilities.
+- Compares the base model with checkpoints from a run stopped after 60 steps on 256 validation pairs.
+- Observed only small changes in preference accuracy; the results do not establish a meaningful improvement from DPO.
