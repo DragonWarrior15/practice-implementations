@@ -99,17 +99,21 @@ measure of response quality. Neither metric assesses newly generated responses.
 
 ### Validation Data Evaluation
 
-Compare checkpoints on the same 256 validation pairs to select a checkpoint
-before evaluating it on the held-out test set.
+Training was stopped after 60 steps because it slowed down the local machine.
+The checkpoints below were evaluated on the same small subset of 256 validation
+pairs, to select a checkpoint before evaluating it on the held-out test set.
 
 | Checkpoint | Run | Pairs | Accuracy (sum) | Accuracy (per token) |
 | --- | --- | ---: | ---: | ---: |
+| Base (no adapter) | [2026-11-19T102414Z](runs/2026-11-19T102414Z/report.json) | 256 | 48.05% | 59.77% |
 | 20 | [2026-11-16T193340Z](runs/2026-11-16T193340Z/report.json) | 256 | 48.44% | 59.77% |
 | 40 | [2026-11-18T180807Z](runs/2026-11-18T180807Z/report.json) | 256 | 48.05% | 59.77% |
 | 60 | [2026-11-18T184003Z](runs/2026-11-18T184003Z/report.json) | 256 | 48.44% | 60.16% |
 
-Checkpoint 20 and checkpoint 60 each ranked the chosen response higher for
-124 pairs by summed score; checkpoint 40 did so for 123. Per-token, the counts
-were 153, 153, and 154, respectively. These differences are small; evaluate
-the base model on the same validation pairs before selecting a checkpoint. The
-test baseline above uses a different split and cannot be compared directly.
+The base model ranked the chosen response higher for 123 pairs by summed score
+and 153 by per-token score. Checkpoints 20 and 60 each improved the summed
+count by one pair; checkpoint 60 also improved the per-token count by one.
+Checkpoint 40 matched the base on both aggregate metrics. These differences are
+small and do not establish a meaningful improvement from DPO, so there is no
+clear best checkpoint from this evaluation. The test baseline above uses a
+different split and cannot be compared directly.
